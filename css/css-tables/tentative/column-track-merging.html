@@ -1,0 +1,158 @@
+<!doctype html>
+<title>Column track merging</title>
+<script src='/resources/testharness.js'></script>
+<script src='/resources/testharnessreport.js'></script>
+<script src="/resources/check-layout-th.js"></script>
+<link rel="author" title="Aleks Totic" href="atotic@chromium.org" />
+<link rel="help" href="https://www.w3.org/TR/css-tables-3/#dimensioning-the-row-column-grid--step2" />
+<style>
+table {
+  border: 10px solid gray;
+  border-spacing: 20px;
+}
+
+td {
+  width: 50px;
+  height:50px;
+  padding: 0;
+  background:linear-gradient(to right, yellow, orange);
+}
+caption {
+  background: #EEE;
+}
+.error {
+  margin-top: 20px;
+  color: rgb(50,0,0);
+}
+</style>
+<h3>Column coalescing investigation</h3>
+<o>Empty columns is a column that has no originating cells</o>
+<p><a href="https://www.w3.org/TR/css-tables-3/#dimensioning-the-row-column-grid--step2">Table standard</a> discusses this under "track merging".</p>
+<ul>
+  <li>Do empty columns get coalesced?</li>
+  <li>How does this interact with table-layout:fixed, visibility:collapse, table width</li>
+  <li>Is there a difference between columns defined in COL, vs  TD.colspan</li>
+</ul>
+<p>Compatibility</p>
+<li>Edge17 matches IE 11. border-spacing never collapses, but cell width does in auto</li>
+<li>Safari matches Chrome Legacy. Everything merges all the time </li>
+<li>Firefox: collapses in auto, in fixed does not collapse but buggy table sizing</li>
+<p>Proposal</p>
+<li>Always collapse TD columns (Chrome/Safari)</li>
+<li>Always collapse COL columns if sizing is auto</li>
+<li>Do not collapse COL columns if sizing is fixed. What about border-spacing between columns?</li>
+<main>
+
+<h3>TD merging</h3>
+
+<pre class="error">
+  FF/Chrome Legacy/Safari: wide cell is 50px, tracks do merge.
+  Edge17: wide cell is 180px (9 * border spacing)
+</pre>
+<table data-expected-width=180>
+<caption>td colspan 100 auto</caption>
+<tr>
+  <td colspan=10 data-expected-width=50>1</td>
+  <td></td>
+</tr>
+<tr>
+  <td colspan=10></td>
+  <td></td>
+</tr>
+</table>
+
+<pre class="error">
+  Chrome/Safari: tracks do merge, wide cell is 50px.
+  Firefox: error: wide cell is 180 (9 * border spacing), but the table remains 100px wide.
+  Edge17: wide cell is 230px (50px + 9 * border spacing)
+</pre>
+<table style="table-layout:fixed; width: 100px" data-expected-width=180>
+<caption>td colspan 100 fixed</caption>
+<tr>
+  <td colspan=10 data-expected-width=50>2</td>
+  <td></td>
+</tr>
+<tr>
+  <td colspan=10></td>
+  <td></td>
+</tr>
+</table>
+
+<pre class="error">
+  Firefox: wide cell is 180, table is resized.
+  Legacy/Safari: column does not collapse
+  Edge17: wide cell is 230px, column does collapse
+</pre>
+<table style="table-layout:fixed; width: 100px" data-expected-width=180>
+<caption>td colspan 100 fixed last column collapses</caption>
+<col span=10>
+<col style="visibility:collapse">
+<tr>
+  <td colspan=10 data-expected-width=50>3</td>
+  <td></td>
+</tr>
+<tr>
+  <td colspan=10></td>
+  <td></td>
+</tr>
+</table>
+
+<pre class="error">
+  Edge17: wide cell is 230px, column does collapse.
+  Firefox: error: wide cell is 180px, table remains narrow.
+</pre>
+<table style="table-layout:fixed; width: 100px" data-expected-width=180>
+<caption>td colspan 100 fixed middle column collapses</caption>
+<col span=5>
+<tr>
+  <td colspan=10 data-expected-width=50>4</td>
+  <td></td>
+</tr>
+<tr>
+  <td colspan=10></td>
+  <td></td>
+</tr>
+</table>
+
+<h3>COL merging</h3>
+
+<pre class="error">
+Edge 17: merges columns.
+Legacy, Safari: merge columns.
+Firefox: does not merge columns, table is wide.
+</pre>
+<table data-expected-width=180>
+<caption>col span 10 auto</caption>
+<col span=10 style="width:50px">
+<tr>
+  <td data-expected-width=50>5</td>
+  <td></td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+</tr>
+</table>
+
+<pre class="error">
+Edge 17: merges columns.
+Legacy, Safari: do not merge columns, table is 600px wide. Body is 4*border_spacing + 10*col width.
+  There is no spacing between empty columns.
+Firefox: does not merge columns, table is 740px wide.
+</pre>
+<table style="table-layout:fixed; width: 100px" data-expected-width=600>
+<caption>col span 10 fixed</caption>
+<col span=10 style="width:50px">
+<tr>
+  <td data-expected-width=50>6</td>
+  <td></td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+</tr>
+</table>
+</main>
+<script>
+  checkLayout("main table");
+</script>
