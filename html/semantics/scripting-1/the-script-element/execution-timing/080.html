@@ -21,7 +21,13 @@
   var t = async_test()
 
   function test() {
-    assert_array_equals(eventOrder, ['inline script #1', 'end script #1', 'inline script #2', 'JS URL', 'frame script']);
+    // Two orders are possible, depending on whether the iframe executes immediately or not.
+    assert_equals(eventOrder.length, 5);
+    if (eventOrder[2] === 'inline script #2') {
+        assert_array_equals(eventOrder, ['inline script #1', 'end script #1', 'inline script #2', 'JS URL', 'frame script']);
+    } else {
+        assert_array_equals(eventOrder, ['inline script #1', 'end script #1', 'JS URL', 'frame script', 'inline script #2']);
+    }
     t.done();
   }
   onload = t.step_func(function(){setTimeout(t.step_func(test), 400);})
